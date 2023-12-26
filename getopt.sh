@@ -6,38 +6,9 @@ if [[ $EUID -ne 0 ]]; then
 	exit 1
 fi
 
-#Declare keys
-OPTIONS=$(getopt -l "help,host,user" "$@")
-
-#Show help if no args
-if [[ $# -eq 0 ]]; then
-	show_help
-	exit 0
-fi
-
-#Parse argumetns
-eval set -- "$OPTIONS"
-
-while true; do
-	case "$1" in
-		--help)
-			show_help
-			exit 0 ;;
-		--host)
-			show_host_info
-			exit 0 ;;
-		--user)
-			show_users
-			exit 0 ;;
-		*)
-			echo "Wrong argument"
-			exit 1 ;;
-	esac
-done	
-
 #Show help information
 show_help() {
-	clear
+	echo
 	echo "DEVOPS SCRIPT(1)"
 	echo
 	echo "NAME"
@@ -64,15 +35,16 @@ show_help() {
 
 #Show users information
 show_users() {
-	clear
-	echo -e "$(tput setaf 1)Root users:"
-	echo "	$(grep 'x:0:' /etc/passwd | awk -F: '{print $1}')"
 	echo
-	echo -e "$(tput setaf 1)List of users:"
+	echo -e "$(tput setaf 1)Root users:$(tput sgr 0)"
+	echo -e "\t$(grep 'x:0:' /etc/passwd | awk -F: '{print $1}')"
+	echo
+	echo -e "$(tput setaf 1)List of users:$(tput sgr 0)"
 	echo "$(awk -F: '{print $1}' /etc/passwd)"
 	echo
-	echo -e "$(tput setaf 1)Logged on users:"
+	echo -e "$(tput setaf 1)Logged on users:$(tput sgr 0)"
 	echo "$(who | awk '{print $1}' | uniq)"
+	echo
 }
 
 get_ip_stats() {
@@ -103,11 +75,11 @@ done
 
 #Show system info
 show_host_info() {
-	clear
+	echo
 	echo -e "$(tput setaf 1)CPU(s):$(tput sgr 0) $(lscpu | grep "^CPU(" | awk '{print $2}')"
 	echo
 	echo -e "$(tput setaf 1)RAM:$(tput sgr 0)"
-	echo "total: $(lsmem | grep "Total on" | awk -F: '{print $2}')"
+	echo "total: $(lsmem | grep "Total on" | awk -F: '{print $2}' | sed -e 's/^[[:space:]]*//')"
 	echo "used: $(free -h | grep "Mem" | awk '{print $3}' | sed 's/.$//')"
 	echo
 	echo -e "$(tput setaf 1)Disk info:$(tput sgr 0)"
@@ -121,6 +93,41 @@ show_host_info() {
 	echo
 	get_ip_stats
 	echo
-	echo -e "$(tput setaf 1)Listen ports:$(tput sgr 0) $(ss -tulpn | grep LISTEN | awk '{print $5}' | awk -F: '{print $2}')"
+	echo -e "$(tput setaf 1)Listen ports:$(tput sgr 0)\n$(ss -tulpn | grep LISTEN | awk '{print $5}' | awk -F: '{print $2}')"
+	echo
 }
+
+
+#Declare keys for getopt
+OPTS=$(getopt -o "" -l "help,host,user" -- "$@")
+
+#Show help if no args
+if [[ $# -eq 0 ]]; then
+	show_help
+	exit 0
+fi
+
+#Parse argumetns
+eval set -- "$OPTS"
+
+while true; do
+	case "$1" in
+		--help)
+			show_help
+			exit 0 ;;
+		--host)
+			show_host_info
+			shift ;;
+		--user)
+			show_users
+			shift ;;
+		--)
+			break ;;
+		*)
+			echo "Wrong argument"
+			exit 1 ;;
+	esac
+done	
+
+set --
 
